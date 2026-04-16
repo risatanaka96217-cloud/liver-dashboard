@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ライバー売上ダッシュボード</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 20px; background: #f0f2f5; margin: 0; }
+    h1 { margin-bottom: 14px; color: #1a1a2e; }
+
+    .card { background: #fff; padding: 16px; border-radius: 12px; margin-top: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+    /* ファイル読み込み */
+    .file-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; }
+    .app-badge { font-size: 12px; font-weight: bold; width: 90px; flex-shrink: 0; }
+    .app-badge.poco  { color: #1a73e8; }
+    .app-badge.tok   { color: #fe2c55; }
+    .file-btn { color: #fff; border: none; border-radius: 6px; padding: 6px 13px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .file-btn.poco  { background: #1a73e8; }
+    .file-btn.poco:hover  { background: #1558b0; }
+    .file-btn.tok   { background: #fe2c55; }
+    .file-btn.tok:hover   { background: #d4193e; }
+    .file-name { font-size: 12px; color: #999; }
+    .sheet-sel { display: none; padding: 5px 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
+    .go-btn, .all-btn { display: none; border: none; border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #fff; }
+    .go-btn  { background: #34a853; }
+    .go-btn:hover  { background: #2d8f47; }
+    .all-btn { background: #9c27b0; }
+    .all-btn:hover { background: #7b1fa2; }
+
+    /* 読み込み済み月チップ */
+    #months { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip { background: #e8f0fe; color: #1a73e8; border-radius: 20px; padding: 4px 10px 4px 14px; font-size: 13px; cursor: pointer; border: 2px solid transparent; display: inline-flex; align-items: center; gap: 5px; user-select: none; }
+    .chip.on { border-color: #1a73e8; font-weight: bold; }
+    .chip .x { color: #bbb; font-size: 11px; cursor: pointer; }
+    .chip .x:hover { color: #c00; }
+
+    /* タブ */
+    .tabs { display: flex; gap: 0; margin-top: 14px; border-bottom: 2px solid #e0e0e0; }
+    .tabBtn { padding: 9px 22px; cursor: pointer; font-size: 14px; color: #888; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; font-weight: 500; }
+    .tabBtn.on { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: bold; }
+    .tabBtn:hover:not(.on) { color: #333; }
+
+    /* ランキンググリッド */
+    #rankArea { display: none; margin-top: 12px; }
+    .rank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+    .view { display: none; }
+    .view.on { display: block; }
+
+    .rank-col { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .rank-col h3 { margin: 0 0 12px; font-size: 15px; }
+    .rank-col h3.poco { color: #1a73e8; }
+    .rank-col h3.tok  { color: #fe2c55; }
+
+    .rrow { display: flex; padding: 8px 4px; border-bottom: 1px solid #f0f0f0; align-items: flex-start; gap: 6px; }
+    .rrow:last-child { border-bottom: none; }
+    .rrow.unk { background: #fff5f5; border-radius: 6px; }
+    .rnum { font-size: 16px; font-weight: bold; color: #ddd; width: 24px; flex-shrink: 0; }
+    .rnum.g { color: #f4a100; }
+    .rnum.s { color: #9e9e9e; }
+    .rnum.b { color: #a1674a; }
+    .rwrap { flex: 1; min-width: 0; }
+    .rname { font-weight: bold; color: #1a1a2e; cursor: pointer; }
+    .rname:hover { color: #1a73e8; text-decoration: underline; }
+    .rraw  { font-size: 11px; color: #ccc; }
+    .cands { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px; }
+    .cands button { background: #f0f0f0; border: none; border-radius: 4px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
+    .cands button:hover { background: #ddd; }
+    .rsales { font-weight: bold; font-size: 14px; white-space: nowrap; }
+
+    /* モーダル */
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
+    #modal.open { display: flex; }
+    #mbox { background: #fff; border-radius: 16px; padding: 24px; width: min(740px, 95vw); max-height: 88vh; overflow-y: auto; position: relative; }
+    #mtitle { font-size: 18px; font-weight: bold; margin-bottom: 16px; padding-right: 30px; }
+    #mclose { position: absolute; top: 16px; right: 20px; cursor: pointer; font-size: 22px; color: #bbb; }
+    #mclose:hover { color: #333; }
+    #mcharts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .mc-section h4 { margin: 0 0 8px; font-size: 14px; }
+    .mc-section h4.poco { color: #1a73e8; }
+    .mc-section h4.tok  { color: #fe2c55; }
+  </style>
+</head>
+<body>
+
+<h1>ライバー売上管理</h1>
+
+<div class="card">
+  <!-- Pococha -->
+  <div class="file-row">
+    <span class="app-badge poco">Pococha</span>
+    <input type="file" id="fp" accept=".xlsx,.xls" style="display:none">
+    <button class="file-btn poco" onclick="document.getElementById('fp').click()">📂 ファイル選択</button>
+    <span class="file-name" id="fnp"></span>
+  </div>
+  <!-- アプリ別明細 -->
+  <div class="file-row">
+    <span class="app-badge tok">アプリ別明細</span>
+    <input type="file" id="ft" accept=".xlsx,.xls" style="display:none">
+    <button class="file-btn tok" onclick="document.getElementById('ft').click()">📂 ファイル選択</button>
+    <span class="file-name" id="fnt"></span>
+  </div>
+  <div id="months"></div>
+  <div style="margin-top:10px;">
+    <button onclick="saveDataJson()" style="background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;">🔄 サイトを更新（data.json保存）</button>
+    <button onclick="exportStandalone()" style="background:#f57c00;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;margin-left:6px;">📤 共有用HTMLを書き出す</button>
+  </div>
+</div>
+
+<div id="rankArea">
+  <div class="tabs">
+    <button class="tabBtn on" onclick="switchTab('monthly')">📅 月別</button>
+    <button class="tabBtn"    onclick="switchTab('yearly')">📊 年別合計</button>
+  </div>
+  <div id="view-monthly" class="view on">
+    <div class="rank-grid" id="grid"></div>
+  </div>
+  <div id="view-yearly" class="view">
+    <div class="rank-grid" id="ygrid"></div>
+  </div>
+</div>
+
+<!-- ライバー詳細モーダル -->
+<div id="modal">
+  <div id="mbox">
+    <span id="mclose" onclick="closeModal()">✕</span>
+    <div id="mtitle"></div>
+    <div id="mcharts"></div>
+  </div>
+</div>
+
+<script>
+// ===== 共有用データプレースホルダー（書き出し時に置換）=====
+const BAKED_DATA = null; // BAKED_DATA_PLACEHOLDER
+
+// ===== State =====
+let pocoData = {};   // "202601" → { month:"2026年1月", livers:[] }
+let tokData  = {};   // "202601" → { month:"2026年1月", livers:[] }
+let activeKey = null;
+let wbPoco = null, wbTok = null;
+let mCharts = [];
+
+// ===== localStorage 永続化 (v2キーで旧データと分離) =====
+(async function init() {
+  try {
+    // 1. 共有用HTML（データ埋め込み済み）
+    if (BAKED_DATA) {
+      pocoData = BAKED_DATA.poco || {};
+      tokData  = BAKED_DATA.tok  || {};
+    } else {
+      // 2. Netlifyデプロイ版: data.json から読み込む
+      let loaded = false;
+      try {
+        const res = await fetch('./data.json');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.poco || json.tok) {
+            pocoData = json.poco || {};
+            tokData  = json.tok  || {};
+            loaded = true;
+          }
+        }
+      } catch(e) {}
+      // 3. ローカル: localStorage から
+      if (!loaded) {
+        const p = localStorage.getItem('poco_v2'); if (p) pocoData = JSON.parse(p);
+        const t = localStorage.getItem('tok_v2');  if (t) tokData  = JSON.parse(t);
+        if (typeof pocoData !== 'object') pocoData = {};
+        if (typeof tokData  !== 'object') tokData  = {};
+      }
+    }
+  } catch(e) { pocoData = {}; tokData = {}; }
+  const keys = allKeys();
+  if (keys.length) {
+    activeKey = keys[0];
+    show(); renderChips();
+    try { renderRanking(); } catch(e) { console.error('init render error:', e); }
+  }
+})();
+
+function persist() {
+  try {
+    localStorage.setItem('poco_v2', JSON.stringify(pocoData));
+    localStorage.setItem('tok_v2',  JSON.stringify(tokData));
+  } catch(e) { console.warn('localStorage full:', e); }
+}
+
+// ===== シート名パーサー =====
+// YYYYMM / YYYY0M / YYMM すべて "YYYYMM" キーに正規化
+function parseSheet(name) {
+  let m;
+  m = name.match(/^(\d{4})0*(\d+)$/);
+  if (m) {
+    const y = +m[1], mo = +m[2];
+    if (y >= 2000 && mo >= 1 && mo <= 12)
+      return { year: y, month: mo, label: `${y}年${mo}月`, key: `${y}${String(mo).padStart(2,'0')}` };
+  }
+  m = name.match(/^(\d{2})(\d{2})$/);
+  if (m) {
+    const y = 2000 + +m[1], mo = +m[2];
+    if (mo >= 1 && mo <= 12)
+      return { year: y, month: mo, label: `${y}年${mo}月`, key: `${y}${String(mo).padStart(2,'0')}` };
+  }
+  return null;
+}
+
+function numKey(k) { return parseInt(k, 10); }
+
+function allKeys() {
+  return [...new Set([...Object.keys(pocoData), ...Object.keys(tokData)])]
+    .sort((a, b) => numKey(b) - numKey(a));
+}
+
+// ===== Pococha ファイル =====
+document.getElementById("fp").addEventListener("change", function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  document.getElementById("fnp").textContent = "読み込み中…";
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      wbPoco = XLSX.read(ev.target.result, { type: "array" });
+      const sheets = wbPoco.SheetNames.filter(n => parseSheet(n));
+      if (sheets.length === 0) { alert("対応するシートが見つかりませんでした"); return; }
+      sheets.forEach(n => loadPoco(n));
+      const totalLivers = sheets.reduce((s, n) => {
+        const p = parseSheet(n); return s + (p && pocoData[p.key]?.livers?.length || 0);
+      }, 0);
+      document.getElementById("fnp").textContent = `${file.name}（${sheets.length}ヶ月・${totalLivers}件）`;
+    } catch(err) { alert("Pocochaファイルの読み込みエラー: " + err.message); }
+  };
+  reader.onerror = () => alert("ファイルの読み取りに失敗しました");
+  reader.readAsArrayBuffer(file);
+});
+
+function loadPoco(sheetName) {
+  try {
+    const ws = wbPoco?.Sheets[sheetName]; if (!ws) return;
+    const p = parseSheet(sheetName); if (!p) return;
+
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    const livers = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const rn = row[0], ln = row[1], sales = row[4];
+      if (!rn) continue;
+      const salesNum = typeof sales === 'number' ? sales : parseFloat(sales);
+      if (!isFinite(salesNum) || salesNum <= 0) continue;
+      const prev = pocoData[p.key]?.livers?.find(x => x.real_name === String(rn));
+      livers.push({ raw_name: ln ? String(ln) : String(rn), real_name: String(rn),
+        sales: Math.round(salesNum), candidates: [{ name: String(rn) }],
+        selected: prev?.selected || String(rn) });
+    }
+    pocoData[p.key] = { month: p.label, livers };
+    onLoaded(p.key);
+  } catch(e) { console.error('loadPoco error:', sheetName, e); }
+}
+
+// ===== アプリ別明細 (TikTok LIVE) =====
+document.getElementById("ft").addEventListener("change", function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  document.getElementById("fnt").textContent = "読み込み中…";
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      wbTok = XLSX.read(ev.target.result, { type: "array" });
+      const sheets = wbTok.SheetNames.filter(n => parseSheet(n));
+      if (sheets.length === 0) { alert("対応するシートが見つかりませんでした"); return; }
+      sheets.forEach(n => loadTok(n));
+      const totalTok = sheets.reduce((s, n) => {
+        const p = parseSheet(n); return s + (p && tokData[p.key]?.livers?.length || 0);
+      }, 0);
+      document.getElementById("fnt").textContent = `${file.name}（${sheets.length}ヶ月・${totalTok}件）`;
+    } catch(err) { alert("アプリ別明細ファイルの読み込みエラー: " + err.message); }
+  };
+  reader.onerror = () => alert("ファイルの読み取りに失敗しました");
+  reader.readAsArrayBuffer(file);
+});
+
+function loadTok(sheetName) {
+  try {
+    const ws = wbTok?.Sheets[sheetName]; if (!ws) return;
+    const p = parseSheet(sheetName); if (!p) return;
+
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+    // TikTok LIVE セクションを探す（列H = index 7 に "TikTok" の行）
+    let hRow = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][7] && String(rows[i][7]).includes('TikTok')) { hRow = i; break; }
+    }
+    if (hRow === -1) { console.warn('TikTok section not found in', sheetName); return; }
+
+    // hRow = タイトル行、hRow+1 = 列ヘッダー行、hRow+2 以降がデータ
+    const livers = [];
+    for (let i = hRow + 2; i < rows.length; i++) {
+      const row = rows[i];
+      const rn = row[7], id = row[8], reward = row[10];
+      if (!rn) continue;
+      const salesNum = typeof reward === 'number' ? reward : parseFloat(reward);
+      if (!isFinite(salesNum) || salesNum <= 0) continue;
+      const prev = tokData[p.key]?.livers?.find(x => x.real_name === String(rn));
+      livers.push({ raw_name: id ? String(id) : String(rn), real_name: String(rn),
+        sales: Math.round(salesNum), candidates: [{ name: String(rn) }],
+        selected: prev?.selected || String(rn) });
+    }
+    tokData[p.key] = { month: p.label, livers };
+    onLoaded(p.key);
+  } catch(e) { console.error('loadTok error:', sheetName, e); }
+}
+
+// ===== データ読み込み後 =====
+function onLoaded(key) {
+  try {
+    if (!activeKey || numKey(key) > numKey(activeKey)) activeKey = key;
+    show(); renderChips(); renderRanking(); persist();
+  } catch(e) { console.error('onLoaded error:', e); alert('表示エラー: ' + e.message); }
+}
+
+function show() { document.getElementById("rankArea").style.display = "block"; }
+
+// ===== 月チップ =====
+function renderChips() {
+  document.getElementById("months").innerHTML = allKeys().map(key => {
+    const label = pocoData[key]?.month || tokData[key]?.month || key;
+    const tag = pocoData[key] && tokData[key] ? '' : pocoData[key] ? ' 🔵' : ' 🔴';
+    return `<div class="chip ${key===activeKey?'on':''}" onclick="switchMonth('${key}')">
+      ${label}${tag}<span class="x" onclick="removeMonth(event,'${key}')">✕</span></div>`;
+  }).join("");
+}
+
+let activeTab = 'monthly';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tabBtn').forEach((btn, i) => {
+    btn.classList.toggle('on', (tab === 'monthly' && i === 0) || (tab === 'yearly' && i === 1));
+  });
+  document.getElementById('view-monthly').classList.toggle('on', tab === 'monthly');
+  document.getElementById('view-yearly').classList.toggle('on', tab === 'yearly');
+  if (tab === 'yearly') renderYearly();
+}
+
+function switchMonth(key) { activeKey = key; renderChips(); renderRanking(); }
+
+function removeMonth(e, key) {
+  e.stopPropagation();
+  delete pocoData[key]; delete tokData[key];
+  activeKey = allKeys()[0] || null;
+  renderChips(); renderRanking(); persist();
+}
+
+// ===== ランキング =====
+function renderRanking() {
+  const grid = document.getElementById("grid");
+  if (!activeKey) { grid.innerHTML = ""; return; }
+
+  const pd = pocoData[activeKey], td = tokData[activeKey];
+  const month = pd?.month || td?.month || activeKey;
+  let html = "";
+  if (pd) html += rankColHTML(pd.livers, `Pococha ${month}`, 'poco', activeKey);
+  if (td) html += rankColHTML(td.livers, `TikTok LIVE ${month}`, 'tok',  activeKey);
+  grid.innerHTML = html;
+}
+
+function rankColHTML(livers, title, app, mk) {
+  const sorted = [...livers].sort((a, b) => b.sales - a.sales);
+  const nc = i => i===0?'g':i===1?'s':i===2?'b':'';
+  const rows = sorted.map((l, i) => {
+    const er = encodeURIComponent(l.raw_name);
+    return `
+      <div class="rrow ${(!l.selected||l.selected==='UNKNOWN')?'unk':''}">
+        <span class="rnum ${nc(i)}">${i+1}</span>
+        <div class="rwrap">
+          <div class="rname" onclick="openModal('${encodeURIComponent(l.real_name)}')">${escH(l.selected||l.raw_name)}</div>
+          <div class="rraw">${escH(l.raw_name)}</div>
+          <div class="cands">
+            ${(l.candidates||[]).map(c=>`<button onclick="sel('${app}','${mk}','${er}','${encodeURIComponent(c.name)}')">${escH(c.name)}</button>`).join("")}
+            <button onclick="sel('${app}','${mk}','${er}','__NEW__')">＋新規</button>
+          </div>
+        </div>
+        <div class="rsales">${l.sales.toLocaleString()}</div>
+      </div>`;
+  }).join("");
+  return `<div class="rank-col"><h3 class="${app}">${escH(title)}</h3>${rows}</div>`;
+}
+
+// ===== 年別ランキング（全体合算）=====
+function renderYearly() {
+  const ygrid = document.getElementById("ygrid");
+
+  // 年一覧（新しい順）
+  const years = [...new Set(
+    Object.keys(pocoData).concat(Object.keys(tokData))
+      .map(k => parseSheet(k)?.year).filter(Boolean)
+  )].sort((a, b) => b - a);
+
+  let html = '';
+  for (const year of years) {
+    const keysP = Object.keys(pocoData).filter(k => parseSheet(k)?.year === year);
+    const keysT = Object.keys(tokData).filter(k => parseSheet(k)?.year === year);
+    if (keysP.length === 0 && keysT.length === 0) continue;
+
+    // ライバーごとに Pococha + TikTok 合算
+    const totals = {};
+    const addToTotals = (store, keys) => {
+      for (const k of keys) {
+        for (const l of (store[k].livers || [])) {
+          const id = l.real_name;
+          if (!totals[id]) totals[id] = { real_name: id, selected: l.selected || l.real_name, sales: 0 };
+          totals[id].selected = l.selected || l.real_name; // 最新表示名
+          totals[id].sales += l.sales;
+        }
+      }
+    };
+    addToTotals(pocoData, keysP);
+    addToTotals(tokData,  keysT);
+
+    const sorted = Object.values(totals).sort((a, b) => b.sales - a.sales);
+    if (sorted.length === 0) continue;
+
+    const nc = i => i===0?'g':i===1?'s':i===2?'b':'';
+    const rows = sorted.map((l, i) => `
+      <div class="rrow">
+        <span class="rnum ${nc(i)}">${i+1}</span>
+        <div class="rwrap">
+          <div class="rname" onclick="openModal('${encodeURIComponent(l.real_name)}')">${escH(l.selected)}</div>
+        </div>
+        <div class="rsales">¥${l.sales.toLocaleString()}</div>
+      </div>`).join('');
+
+    html += `<div class="rank-col"><h3 class="poco">${year}年 全体ランキング</h3>${rows}</div>`;
+  }
+
+  ygrid.innerHTML = html || '<p style="color:#aaa;padding:16px;">データがありません</p>';
+}
+
+function sel(app, mk, rawEnc, nameEnc) {
+  const raw = decodeURIComponent(rawEnc);
+  const store = app === 'poco' ? pocoData : tokData;
+  const l = store[mk]?.livers.find(x => x.raw_name === raw);
+  if (!l) return;
+  if (nameEnc === "__NEW__") { const v = prompt("新しい名前を入力"); if (v) l.selected = v; }
+  else l.selected = decodeURIComponent(nameEnc);
+  renderRanking(); persist();
+}
+
+// ===== モーダル（ライバー月別グラフ） =====
+function openModal(enc) {
+  const realName = decodeURIComponent(enc);
+  mCharts.forEach(c => c.destroy()); mCharts = [];
+
+  // 最新月の表示名を取得
+  let displayName = realName;
+  for (const store of [pocoData, tokData]) {
+    const k = Object.keys(store).sort((a,b)=>numKey(b)-numKey(a))
+      .find(k => store[k].livers.find(l => l.real_name === realName));
+    if (k) { const l = store[k].livers.find(l => l.real_name === realName);
+      if (l) { displayName = l.selected || realName; break; } }
+  }
+  document.getElementById("mtitle").textContent = displayName;
+
+  const apps = [
+    { store: pocoData, label: 'Pococha', cls: 'poco', bg: 'rgba(26,115,232,.7)', border: 'rgba(26,115,232,1)' },
+    { store: tokData,  label: 'TikTok LIVE', cls: 'tok', bg: 'rgba(254,44,85,.7)',  border: 'rgba(254,44,85,1)' },
+  ];
+
+  const div = document.getElementById("mcharts");
+  div.innerHTML = "";
+  let found = false;
+
+  apps.forEach(app => {
+    const monthly = {};
+    for (const key of Object.keys(app.store)) {
+      const l = app.store[key].livers.find(x => x.real_name === realName);
+      if (l) monthly[key] = l.sales;
+    }
+    if (!Object.keys(monthly).length) return;
+    found = true;
+
+    const cid = `mc_${app.cls}`;
+    const sec = document.createElement("div");
+    sec.className = "mc-section";
+    sec.innerHTML = `<h4 class="${app.cls}">${app.label}</h4><canvas id="${cid}"></canvas>`;
+    div.appendChild(sec);
+
+    const sortedK = Object.keys(monthly).sort((a,b)=>numKey(a)-numKey(b));
+    setTimeout(() => {
+      const c = new Chart(document.getElementById(cid), {
+        type: 'bar',
+        data: {
+          labels: sortedK.map(k => { const p=parseSheet(k); return p?p.label:k; }),
+          datasets: [{ data: sortedK.map(k=>monthly[k]), backgroundColor: app.bg, borderColor: app.border, borderWidth: 1 }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } },
+            x: { ticks: { maxRotation: 45, minRotation: 30 } }
+          }
+        }
+      });
+      mCharts.push(c);
+    }, 0);
+  });
+
+  if (!found) return;
+  document.getElementById("modal").classList.add("open");
+}
+
+function closeModal() { document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("modal")) closeModal();
+});
+
+// ===== data.json 保存（Netlify更新用）=====
+function saveDataJson() {
+  const json = JSON.stringify({ poco: pocoData, tok: tokData }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ===== 共有用HTML書き出し =====
+function exportStandalone() {
+  const src = document.documentElement.outerHTML;
+  const dataStr = JSON.stringify({ poco: pocoData, tok: tokData });
+  const out = src.replace(
+    'const BAKED_DATA = null; // BAKED_DATA_PLACEHOLDER',
+    `const BAKED_DATA = ${dataStr}; // BAKED_DATA_PLACEHOLDER`
+  );
+  if (out === src) {
+    alert('書き出し失敗：プレースホルダーが見つかりませんでした');
+    return;
+  }
+  const blob = new Blob([out], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ライバー売上_${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function escH(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>
