@@ -221,7 +221,7 @@ document.getElementById("fp").addEventListener("change", function(e) {
   reader.onload = ev => {
     try {
       wbPoco = XLSX.read(ev.target.result, { type: "array" });
-      const sheets = wbPoco.SheetNames.filter(n => parseSheet(n));
+      const sheets = wbPoco.SheetNames.filter(n => { const p = parseSheet(n); return p && p.year >= 2025; });
       if (sheets.length === 0) { alert("対応するシートが見つかりませんでした"); return; }
       sheets.forEach(n => loadPoco(n));
       const totalLivers = sheets.reduce((s, n) => {
@@ -265,7 +265,7 @@ document.getElementById("ft").addEventListener("change", function(e) {
   reader.onload = ev => {
     try {
       wbTok = XLSX.read(ev.target.result, { type: "array" });
-      const sheets = wbTok.SheetNames.filter(n => parseSheet(n));
+      const sheets = wbTok.SheetNames.filter(n => { const p = parseSheet(n); return p && p.year >= 2025; });
       if (sheets.length === 0) { alert("対応するシートが見つかりませんでした"); return; }
       sheets.forEach(n => loadTok(n));
       const totalTok = sheets.reduce((s, n) => {
