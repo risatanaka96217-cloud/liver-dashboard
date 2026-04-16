@@ -285,18 +285,22 @@ function loadTok(sheetName) {
 
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
-    // TikTok LIVE セクションを探す（列H = index 7 に "TikTok" の行）
-    let hRow = -1;
+    // TikTok LIVE セクションを探す
+    // 新形式(2511〜): H列(index 7)、旧形式(2510以前): A列(index 0)
+    let hRow = -1, colOffset = 7;
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i][7] && String(rows[i][7]).includes('TikTok')) { hRow = i; break; }
+      if (rows[i][7] && String(rows[i][7]).includes('TikTok')) { hRow = i; colOffset = 7; break; }
+      if (rows[i][0] && String(rows[i][0]).includes('TikTok')) { hRow = i; colOffset = 0; break; }
     }
     if (hRow === -1) { console.warn('TikTok section not found in', sheetName); return; }
 
     // hRow = タイトル行、hRow+1 = 列ヘッダー行、hRow+2 以降がデータ
+    // 新形式: 本名=+0, ID=+1, ダイヤ=+2, 報酬=+3 (colOffset=7 → 7,8,9,10)
+    // 旧形式: 本名=+0, ID=+1, ダイヤ=+2, 報酬=+3 (colOffset=0 → 0,1,2,3)
     const livers = [];
     for (let i = hRow + 2; i < rows.length; i++) {
       const row = rows[i];
-      const rn = row[7], id = row[8], reward = row[10];
+      const rn = row[colOffset], id = row[colOffset + 1], reward = row[colOffset + 3];
       if (!rn) continue;
       const salesNum = typeof reward === 'number' ? reward : parseFloat(reward);
       if (!isFinite(salesNum) || salesNum <= 0) continue;
