@@ -8,78 +8,124 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: sans-serif; padding: 20px; background: #f0f2f5; margin: 0; }
-    h1 { margin-bottom: 14px; color: #1a1a2e; }
+    body { font-family: sans-serif; padding: 20px; background: #f5f5f7; margin: 0; color: #1a1a2e; }
+    h1 { margin: 0 0 14px; font-size: 22px; }
 
-    .card { background: #fff; padding: 16px; border-radius: 12px; margin-top: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .card { background: #fff; padding: 16px; border-radius: 14px; margin-top: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
 
     /* ファイル読み込み */
-    .file-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; }
+    .file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
     .app-badge { font-size: 12px; font-weight: bold; width: 90px; flex-shrink: 0; }
-    .app-badge.poco  { color: #1a73e8; }
-    .app-badge.tok   { color: #fe2c55; }
-    .file-btn { color: #fff; border: none; border-radius: 6px; padding: 6px 13px; font-size: 13px; cursor: pointer; white-space: nowrap; }
-    .file-btn.poco  { background: #1a73e8; }
-    .file-btn.poco:hover  { background: #1558b0; }
-    .file-btn.tok   { background: #fe2c55; }
-    .file-btn.tok:hover   { background: #d4193e; }
-    .file-name { font-size: 12px; color: #999; }
-    .sheet-sel { display: none; padding: 5px 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
-    .go-btn, .all-btn { display: none; border: none; border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #fff; }
-    .go-btn  { background: #34a853; }
-    .go-btn:hover  { background: #2d8f47; }
-    .all-btn { background: #9c27b0; }
-    .all-btn:hover { background: #7b1fa2; }
+    .app-badge.poco { color: #1a73e8; }
+    .app-badge.tok  { color: #fe2c55; }
+    .file-btn { color: #fff; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; cursor: pointer; }
+    .file-btn.poco { background: #1a73e8; } .file-btn.poco:hover { background: #1558b0; }
+    .file-btn.tok  { background: #fe2c55; } .file-btn.tok:hover  { background: #d4193e; }
+    .file-name { font-size: 12px; color: #aaa; }
+    .action-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .act-btn { border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; cursor: pointer; color: #fff; }
 
-    /* 読み込み済み月チップ */
-    #months { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .chip { background: #e8f0fe; color: #1a73e8; border-radius: 20px; padding: 4px 10px 4px 14px; font-size: 13px; cursor: pointer; border: 2px solid transparent; display: inline-flex; align-items: center; gap: 5px; user-select: none; }
-    .chip.on { border-color: #1a73e8; font-weight: bold; }
-    .chip .x { color: #bbb; font-size: 11px; cursor: pointer; }
-    .chip .x:hover { color: #c00; }
+    /* 月チップ */
+    #months { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .chip { background: #e8f0fe; color: #1a73e8; border-radius: 20px; padding: 4px 12px 4px 14px;
+            font-size: 13px; cursor: pointer; border: 2px solid transparent;
+            display: inline-flex; align-items: center; gap: 5px; user-select: none; transition: .15s; }
+    .chip.on { border-color: #1a73e8; font-weight: bold; background: #fff; }
+    .chip:hover:not(.on) { background: #d2e3fc; }
+    .chip .x { color: #ccc; font-size: 10px; }
+    .chip .x:hover { color: #e00; }
 
     /* タブ */
-    .tabs { display: flex; gap: 0; margin-top: 14px; border-bottom: 2px solid #e0e0e0; }
-    .tabBtn { padding: 9px 22px; cursor: pointer; font-size: 14px; color: #888; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; font-weight: 500; }
-    .tabBtn.on { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: bold; }
-    .tabBtn:hover:not(.on) { color: #333; }
-
-    /* ランキンググリッド */
-    #rankArea { display: none; margin-top: 12px; }
-    .rank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+    #rankArea { display: none; margin-top: 14px; }
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid #e8e8e8; }
+    .tabBtn { padding: 10px 22px; cursor: pointer; font-size: 14px; color: #999;
+              border: none; background: none; border-bottom: 3px solid transparent;
+              margin-bottom: -2px; font-weight: 500; transition: color .15s; }
+    .tabBtn.on { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 700; }
+    .tabBtn:hover:not(.on) { color: #444; }
     .view { display: none; }
     .view.on { display: block; }
 
-    .rank-col { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    /* 月合計バナー */
+    .month-total-bar {
+      display: none; align-items: stretch; gap: 10px; margin: 12px 0 10px; flex-wrap: wrap;
+    }
+    .mtotal-item {
+      flex: 1; min-width: 140px; border-radius: 12px; padding: 12px 18px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .mtotal-item.poco { background: #e8f0fe; }
+    .mtotal-item.tok  { background: #ffeaee; }
+    .mtotal-item.all  { background: #e8f5e9; }
+    .mtotal-label { font-size: 12px; font-weight: 600; }
+    .mtotal-item.poco .mtotal-label { color: #1558b0; }
+    .mtotal-item.tok  .mtotal-label { color: #c62828; }
+    .mtotal-item.all  .mtotal-label { color: #2e7d32; }
+    .mtotal-val { font-size: 20px; font-weight: 800; letter-spacing: -.5px; }
+    .mtotal-item.poco .mtotal-val { color: #1a73e8; }
+    .mtotal-item.tok  .mtotal-val { color: #fe2c55; }
+    .mtotal-item.all  .mtotal-val { color: #43a047; }
+
+    /* ランキンググリッド (月別) */
+    .rank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+    .rank-col { background: #fff; border-radius: 14px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
     .rank-col h3 { margin: 0 0 12px; font-size: 15px; }
     .rank-col h3.poco { color: #1a73e8; }
     .rank-col h3.tok  { color: #fe2c55; }
 
-    .rrow { display: flex; padding: 8px 4px; border-bottom: 1px solid #f0f0f0; align-items: flex-start; gap: 6px; }
+    .rrow { display: flex; padding: 8px 4px; border-bottom: 1px solid #f0f0f0; align-items: flex-start; gap: 8px; }
     .rrow:last-child { border-bottom: none; }
-    .rrow.unk { background: #fff5f5; border-radius: 6px; }
-    .rnum { font-size: 16px; font-weight: bold; color: #ddd; width: 24px; flex-shrink: 0; }
+    .rnum { font-size: 15px; font-weight: 800; color: #ddd; width: 22px; flex-shrink: 0; text-align: right; }
     .rnum.g { color: #f4a100; }
     .rnum.s { color: #9e9e9e; }
     .rnum.b { color: #a1674a; }
     .rwrap { flex: 1; min-width: 0; }
-    .rname { font-weight: bold; color: #1a1a2e; cursor: pointer; }
+    .rname { font-weight: 700; font-size: 13px; color: #1a1a2e; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rname:hover { color: #1a73e8; text-decoration: underline; }
-    .rraw  { font-size: 11px; color: #ccc; }
-    .cands { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px; }
-    .cands button { background: #f0f0f0; border: none; border-radius: 4px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
-    .cands button:hover { background: #ddd; }
-    .rsales { font-weight: bold; font-size: 14px; white-space: nowrap; }
+    .rraw  { font-size: 11px; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cands { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 3px; }
+    .cands button { background: #f4f4f4; border: none; border-radius: 4px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
+    .cands button:hover { background: #e0e0e0; }
+    .rsales { font-weight: 700; font-size: 13px; white-space: nowrap; color: #333; flex-shrink: 0; }
+
+    /* 年別ビュー — 左にランキング、右にトレンド */
+    .yearly-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 14px;
+      align-items: start;
+      margin-top: 12px;
+    }
+    @media (max-width: 900px) { .yearly-layout { grid-template-columns: 1fr; } }
+
+    #ygrid { display: flex; flex-direction: column; gap: 12px; }
+    .year-card { background: #fff; border-radius: 14px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+    .year-card-title { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+    .year-card-title h3 { margin: 0; font-size: 15px; color: #1a73e8; }
+    .year-card-title .ytotal { font-size: 12px; color: #bbb; }
+
+    /* 合計推移パネル */
+    .trend-panel { display: flex; flex-direction: column; gap: 12px; }
+    .trend-card { background: #fff; border-radius: 14px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+    .trend-card h3 { margin: 0 0 14px; font-size: 15px; color: #1a73e8; }
+    .trend-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+    .trend-table th { background: #e8f0fe; color: #1558b0; font-weight: 700; padding: 8px 10px; text-align: left; }
+    .trend-table td { padding: 8px 10px; border-bottom: 1px solid #f5f5f5; }
+    .trend-table tr:last-child td { border-bottom: none; }
+    .trend-table tr:hover td { background: #fafafa; }
+    .td-num { text-align: right; font-weight: 700; color: #1a73e8; }
+    .td-bar-wrap { width: 35%; padding-right: 10px; }
+    .trend-bar-inner { height: 7px; background: linear-gradient(90deg,#1a73e8,#90caf9); border-radius: 4px; min-width: 2px; }
 
     /* モーダル */
-    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: center; justify-content: center; }
     #modal.open { display: flex; }
-    #mbox { background: #fff; border-radius: 16px; padding: 24px; width: min(740px, 95vw); max-height: 88vh; overflow-y: auto; position: relative; }
-    #mtitle { font-size: 18px; font-weight: bold; margin-bottom: 16px; padding-right: 30px; }
-    #mclose { position: absolute; top: 16px; right: 20px; cursor: pointer; font-size: 22px; color: #bbb; }
+    #mbox { background: #fff; border-radius: 18px; padding: 26px; width: min(700px, 95vw); max-height: 88vh; overflow-y: auto; position: relative; }
+    #mtitle { font-size: 18px; font-weight: 800; margin-bottom: 16px; padding-right: 32px; }
+    #mclose { position: absolute; top: 18px; right: 22px; cursor: pointer; font-size: 22px; color: #ccc; line-height: 1; }
     #mclose:hover { color: #333; }
     #mcharts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-    .mc-section h4 { margin: 0 0 8px; font-size: 14px; }
+    .mc-section h4 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
     .mc-section h4.poco { color: #1a73e8; }
     .mc-section h4.tok  { color: #fe2c55; }
   </style>
@@ -89,14 +135,12 @@
 <h1>ライバー売上管理</h1>
 
 <div class="card">
-  <!-- Pococha -->
   <div class="file-row">
     <span class="app-badge poco">Pococha</span>
     <input type="file" id="fp" accept=".xlsx,.xls" style="display:none">
     <button class="file-btn poco" onclick="document.getElementById('fp').click()">📂 ファイル選択</button>
     <span class="file-name" id="fnp"></span>
   </div>
-  <!-- アプリ別明細 -->
   <div class="file-row">
     <span class="app-badge tok">アプリ別明細</span>
     <input type="file" id="ft" accept=".xlsx,.xls" style="display:none">
@@ -104,9 +148,9 @@
     <span class="file-name" id="fnt"></span>
   </div>
   <div id="months"></div>
-  <div style="margin-top:10px;">
-    <button onclick="saveDataJson()" style="background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;">🔄 サイトを更新（data.json保存）</button>
-    <button onclick="exportStandalone()" style="background:#f57c00;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;margin-left:6px;">📤 共有用HTMLを書き出す</button>
+  <div class="action-bar">
+    <button class="act-btn" style="background:#2e7d32;" onclick="saveDataJson()">🔄 data.json 保存</button>
+    <button class="act-btn" style="background:#f57c00;" onclick="exportStandalone()">📤 共有用 HTML 書き出し</button>
   </div>
 </div>
 
@@ -115,15 +159,42 @@
     <button class="tabBtn on" onclick="switchTab('monthly')">📅 月別</button>
     <button class="tabBtn"    onclick="switchTab('yearly')">📊 年別合計</button>
   </div>
+
+  <!-- 月別 -->
   <div id="view-monthly" class="view on">
+    <div class="month-total-bar" id="month-total-bar">
+      <div class="mtotal-item poco">
+        <span class="mtotal-label">Pococha</span>
+        <span class="mtotal-val" id="mtotal-poco">—</span>
+      </div>
+      <div class="mtotal-item tok">
+        <span class="mtotal-label">TikTok LIVE</span>
+        <span class="mtotal-val" id="mtotal-tok">—</span>
+      </div>
+      <div class="mtotal-item all">
+        <span class="mtotal-label">全体合計</span>
+        <span class="mtotal-val" id="mtotal-all">—</span>
+      </div>
+    </div>
     <div class="rank-grid" id="grid"></div>
   </div>
+
+  <!-- 年別合計 -->
   <div id="view-yearly" class="view">
-    <div class="rank-grid" id="ygrid"></div>
+    <div class="yearly-layout">
+      <div id="ygrid"></div>
+      <div class="trend-panel">
+        <div class="trend-card">
+          <h3>📈 月別合計推移</h3>
+          <canvas id="trendChart" style="max-height:260px;"></canvas>
+          <div id="trend-table-wrap"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ライバー詳細モーダル -->
+<!-- モーダル -->
 <div id="modal">
   <div id="mbox">
     <span id="mclose" onclick="closeModal()">✕</span>
@@ -137,21 +208,20 @@
 const BAKED_DATA = null; // BAKED_DATA_PLACEHOLDER
 
 // ===== State =====
-let pocoData = {};   // "202601" → { month:"2026年1月", livers:[] }
-let tokData  = {};   // "202601" → { month:"2026年1月", livers:[] }
+let pocoData = {};
+let tokData  = {};
 let activeKey = null;
 let wbPoco = null, wbTok = null;
 let mCharts = [];
+let trendChart = null;
 
-// ===== localStorage 永続化 (v2キーで旧データと分離) =====
+// ===== 初期化 =====
 (async function init() {
   try {
-    // 1. 共有用HTML（データ埋め込み済み）
     if (BAKED_DATA) {
       pocoData = BAKED_DATA.poco || {};
       tokData  = BAKED_DATA.tok  || {};
     } else {
-      // 2. Netlifyデプロイ版: data.json から読み込む
       let loaded = false;
       try {
         const res = await fetch('./data.json');
@@ -164,7 +234,6 @@ let mCharts = [];
           }
         }
       } catch(e) {}
-      // 3. ローカル: localStorage から
       if (!loaded) {
         const p = localStorage.getItem('poco_v2'); if (p) pocoData = JSON.parse(p);
         const t = localStorage.getItem('tok_v2');  if (t) tokData  = JSON.parse(t);
@@ -177,7 +246,7 @@ let mCharts = [];
   if (keys.length) {
     activeKey = keys[0];
     show(); renderChips();
-    try { renderRanking(); } catch(e) { console.error('init render error:', e); }
+    try { renderRanking(); } catch(e) { console.error(e); }
   }
 })();
 
@@ -185,11 +254,10 @@ function persist() {
   try {
     localStorage.setItem('poco_v2', JSON.stringify(pocoData));
     localStorage.setItem('tok_v2',  JSON.stringify(tokData));
-  } catch(e) { console.warn('localStorage full:', e); }
+  } catch(e) {}
 }
 
 // ===== シート名パーサー =====
-// YYYYMM / YYYY0M / YYMM すべて "YYYYMM" キーに正規化
 function parseSheet(name) {
   let m;
   m = name.match(/^(\d{4})0*(\d+)$/);
@@ -208,13 +276,12 @@ function parseSheet(name) {
 }
 
 function numKey(k) { return parseInt(k, 10); }
-
 function allKeys() {
   return [...new Set([...Object.keys(pocoData), ...Object.keys(tokData)])]
     .sort((a, b) => numKey(b) - numKey(a));
 }
 
-// ===== Pococha ファイル =====
+// ===== Pococha =====
 document.getElementById("fp").addEventListener("change", function(e) {
   const file = e.target.files[0]; if (!file) return;
   document.getElementById("fnp").textContent = "読み込み中…";
@@ -223,12 +290,12 @@ document.getElementById("fp").addEventListener("change", function(e) {
     try {
       wbPoco = XLSX.read(ev.target.result, { type: "array" });
       const sheets = wbPoco.SheetNames.filter(n => { const p = parseSheet(n); return p && p.year >= 2025; });
-      if (sheets.length === 0) { alert("対応するシートが見つかりませんでした"); return; }
+      if (!sheets.length) { alert("対応するシートが見つかりませんでした"); return; }
       sheets.forEach(n => loadPoco(n));
-      const totalLivers = sheets.reduce((s, n) => {
+      const total = sheets.reduce((s, n) => {
         const p = parseSheet(n); return s + (p && pocoData[p.key]?.livers?.length || 0);
       }, 0);
-      document.getElementById("fnp").textContent = `${file.name}（${sheets.length}ヶ月・${totalLivers}件）`;
+      document.getElementById("fnp").textContent = `${file.name}（${sheets.length}ヶ月・${total}件）`;
     } catch(err) { alert("Pocochaファイルの読み込みエラー: " + err.message); }
   };
   reader.onerror = () => alert("ファイルの読み取りに失敗しました");
@@ -239,13 +306,14 @@ function loadPoco(sheetName) {
   try {
     const ws = wbPoco?.Sheets[sheetName]; if (!ws) return;
     const p = parseSheet(sheetName); if (!p) return;
-
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
     const livers = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const rn = row[0], ln = row[1], sales = row[4];
       if (!rn) continue;
+      // 合計行はランキングから除外
+      if (String(rn).includes('合計') || String(rn).trim() === '合 計') continue;
       const salesNum = typeof sales === 'number' ? sales : parseFloat(sales);
       if (!isFinite(salesNum) || salesNum <= 0) continue;
       const prev = pocoData[p.key]?.livers?.find(x => x.real_name === String(rn));
@@ -258,7 +326,7 @@ function loadPoco(sheetName) {
   } catch(e) { console.error('loadPoco error:', sheetName, e); }
 }
 
-// ===== アプリ別明細 (TikTok LIVE) =====
+// ===== TikTok LIVE =====
 document.getElementById("ft").addEventListener("change", function(e) {
   const file = e.target.files[0]; if (!file) return;
   document.getElementById("fnt").textContent = "読み込み中…";
@@ -267,12 +335,12 @@ document.getElementById("ft").addEventListener("change", function(e) {
     try {
       wbTok = XLSX.read(ev.target.result, { type: "array" });
       const sheets = wbTok.SheetNames.filter(n => { const p = parseSheet(n); return p && p.year >= 2025; });
-      if (sheets.length === 0) { alert("対応するシートが見つかりませんでした"); return; }
+      if (!sheets.length) { alert("対応するシートが見つかりませんでした"); return; }
       sheets.forEach(n => loadTok(n));
-      const totalTok = sheets.reduce((s, n) => {
+      const total = sheets.reduce((s, n) => {
         const p = parseSheet(n); return s + (p && tokData[p.key]?.livers?.length || 0);
       }, 0);
-      document.getElementById("fnt").textContent = `${file.name}（${sheets.length}ヶ月・${totalTok}件）`;
+      document.getElementById("fnt").textContent = `${file.name}（${sheets.length}ヶ月・${total}件）`;
     } catch(err) { alert("アプリ別明細ファイルの読み込みエラー: " + err.message); }
   };
   reader.onerror = () => alert("ファイルの読み取りに失敗しました");
@@ -283,21 +351,13 @@ function loadTok(sheetName) {
   try {
     const ws = wbTok?.Sheets[sheetName]; if (!ws) return;
     const p = parseSheet(sheetName); if (!p) return;
-
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-
-    // TikTok LIVE セクションを探す
-    // 新形式(2511〜): H列(index 7)、旧形式(2510以前): A列(index 0)
     let hRow = -1, colOffset = 7;
     for (let i = 0; i < rows.length; i++) {
       if (rows[i][7] && String(rows[i][7]).includes('TikTok')) { hRow = i; colOffset = 7; break; }
       if (rows[i][0] && String(rows[i][0]).includes('TikTok')) { hRow = i; colOffset = 0; break; }
     }
     if (hRow === -1) { console.warn('TikTok section not found in', sheetName); return; }
-
-    // hRow = タイトル行、hRow+1 = 列ヘッダー行、hRow+2 以降がデータ
-    // 新形式: 本名=+0, ID=+1, ダイヤ=+2, 報酬=+3 (colOffset=7 → 7,8,9,10)
-    // 旧形式: 本名=+0, ID=+1, ダイヤ=+2, 報酬=+3 (colOffset=0 → 0,1,2,3)
     const livers = [];
     for (let i = hRow + 2; i < rows.length; i++) {
       const row = rows[i];
@@ -315,12 +375,13 @@ function loadTok(sheetName) {
   } catch(e) { console.error('loadTok error:', sheetName, e); }
 }
 
-// ===== データ読み込み後 =====
 function onLoaded(key) {
   try {
     if (!activeKey || numKey(key) > numKey(activeKey)) activeKey = key;
-    show(); renderChips(); renderRanking(); persist();
-  } catch(e) { console.error('onLoaded error:', e); alert('表示エラー: ' + e.message); }
+    show(); renderChips(); renderRanking();
+    if (activeTab === 'yearly') renderYearly();
+    persist();
+  } catch(e) { console.error(e); alert('表示エラー: ' + e.message); }
 }
 
 function show() { document.getElementById("rankArea").style.display = "block"; }
@@ -340,7 +401,7 @@ let activeTab = 'monthly';
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tabBtn').forEach((btn, i) => {
-    btn.classList.toggle('on', (tab === 'monthly' && i === 0) || (tab === 'yearly' && i === 1));
+    btn.classList.toggle('on', (tab==='monthly'&&i===0)||(tab==='yearly'&&i===1));
   });
   document.getElementById('view-monthly').classList.toggle('on', tab === 'monthly');
   document.getElementById('view-yearly').classList.toggle('on', tab === 'yearly');
@@ -356,16 +417,28 @@ function removeMonth(e, key) {
   renderChips(); renderRanking(); persist();
 }
 
-// ===== ランキング =====
+// ===== 月別ランキング =====
 function renderRanking() {
   const grid = document.getElementById("grid");
-  if (!activeKey) { grid.innerHTML = ""; return; }
+  const bar  = document.getElementById("month-total-bar");
+  if (!activeKey) { grid.innerHTML = ""; bar.style.display = "none"; return; }
 
   const pd = pocoData[activeKey], td = tokData[activeKey];
   const month = pd?.month || td?.month || activeKey;
+
+  // 合計バナー
+  const pocoTotal = (pd?.livers || []).reduce((s, l) => s + l.sales, 0);
+  const tokTotal  = (td?.livers || []).reduce((s, l) => s + l.sales, 0);
+  const allTotal  = pocoTotal + tokTotal;
+  document.getElementById("mtotal-poco").textContent = pd ? `¥${pocoTotal.toLocaleString()}` : '—';
+  document.getElementById("mtotal-tok").textContent  = td ? `¥${tokTotal.toLocaleString()}`  : '—';
+  document.getElementById("mtotal-all").textContent  = `¥${allTotal.toLocaleString()}`;
+  bar.style.display = "flex";
+
+  // ランキング列
   let html = "";
   if (pd) html += rankColHTML(pd.livers, `Pococha ${month}`, 'poco', activeKey);
-  if (td) html += rankColHTML(td.livers, `TikTok LIVE ${month}`, 'tok',  activeKey);
+  if (td) html += rankColHTML(td.livers, `TikTok LIVE ${month}`, 'tok', activeKey);
   grid.innerHTML = html;
 }
 
@@ -375,7 +448,7 @@ function rankColHTML(livers, title, app, mk) {
   const rows = sorted.map((l, i) => {
     const er = encodeURIComponent(l.raw_name);
     return `
-      <div class="rrow ${(!l.selected||l.selected==='UNKNOWN')?'unk':''}">
+      <div class="rrow">
         <span class="rnum ${nc(i)}">${i+1}</span>
         <div class="rwrap">
           <div class="rname" onclick="openModal('${encodeURIComponent(l.real_name)}')">${escH(l.selected||l.raw_name)}</div>
@@ -385,17 +458,16 @@ function rankColHTML(livers, title, app, mk) {
             <button onclick="sel('${app}','${mk}','${er}','__NEW__')">＋新規</button>
           </div>
         </div>
-        <div class="rsales">${l.sales.toLocaleString()}</div>
+        <div class="rsales">¥${l.sales.toLocaleString()}</div>
       </div>`;
   }).join("");
   return `<div class="rank-col"><h3 class="${app}">${escH(title)}</h3>${rows}</div>`;
 }
 
-// ===== 年別ランキング（全体合算）=====
+// ===== 年別ランキング + 合計推移 =====
 function renderYearly() {
+  // --- ランキング ---
   const ygrid = document.getElementById("ygrid");
-
-  // 年一覧（新しい順）
   const years = [...new Set(
     Object.keys(pocoData).concat(Object.keys(tokData))
       .map(k => parseSheet(k)?.year).filter(Boolean)
@@ -405,42 +477,98 @@ function renderYearly() {
   for (const year of years) {
     const keysP = Object.keys(pocoData).filter(k => parseSheet(k)?.year === year);
     const keysT = Object.keys(tokData).filter(k => parseSheet(k)?.year === year);
-    if (keysP.length === 0 && keysT.length === 0) continue;
+    if (!keysP.length && !keysT.length) continue;
 
-    // ライバーごとに Pococha + TikTok 合算
     const totals = {};
-    const addToTotals = (store, keys) => {
+    const add = (store, keys) => {
       for (const k of keys) {
         for (const l of (store[k].livers || [])) {
           const id = l.real_name;
           if (!totals[id]) totals[id] = { real_name: id, selected: l.selected || l.real_name, sales: 0 };
-          totals[id].selected = l.selected || l.real_name; // 最新表示名
+          totals[id].selected = l.selected || l.real_name;
           totals[id].sales += l.sales;
         }
       }
     };
-    addToTotals(pocoData, keysP);
-    addToTotals(tokData,  keysT);
+    add(pocoData, keysP);
+    add(tokData,  keysT);
 
     const sorted = Object.values(totals).sort((a, b) => b.sales - a.sales);
-    if (sorted.length === 0) continue;
+    if (!sorted.length) continue;
 
+    const yearTotal = sorted.reduce((s, l) => s + l.sales, 0);
     const nc = i => i===0?'g':i===1?'s':i===2?'b':'';
     const rows = sorted.map((l, i) => `
       <div class="rrow">
         <span class="rnum ${nc(i)}">${i+1}</span>
         <div class="rwrap">
           <div class="rname" onclick="openModal('${encodeURIComponent(l.real_name)}')">${escH(l.selected)}</div>
+          <div class="rraw">${escH(l.real_name)}</div>
         </div>
         <div class="rsales">¥${l.sales.toLocaleString()}</div>
       </div>`).join('');
 
-    html += `<div class="rank-col"><h3 class="poco">${year}年 全体ランキング</h3>${rows}</div>`;
+    html += `
+      <div class="year-card">
+        <div class="year-card-title">
+          <h3>${year}年 全体ランキング</h3>
+          <span class="ytotal">年間合計 ¥${yearTotal.toLocaleString()}</span>
+        </div>
+        ${rows}
+      </div>`;
   }
+  ygrid.innerHTML = html || '<p style="color:#bbb;padding:20px;">データがありません</p>';
 
-  ygrid.innerHTML = html || '<p style="color:#aaa;padding:16px;">データがありません</p>';
+  // --- 合計推移チャート ---
+  const allKeys_ = allKeys().slice().reverse(); // 古い順
+  if (!allKeys_.length) return;
+
+  const labels = allKeys_.map(k => pocoData[k]?.month || tokData[k]?.month || k);
+  const pocoVals = allKeys_.map(k => (pocoData[k]?.livers || []).reduce((s, l) => s + l.sales, 0));
+  const tokVals  = allKeys_.map(k => (tokData[k]?.livers  || []).reduce((s, l) => s + l.sales, 0));
+  const allVals  = allKeys_.map((_, i) => pocoVals[i] + tokVals[i]);
+  const maxVal   = Math.max(...allVals, 1);
+
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
+  trendChart = new Chart(document.getElementById("trendChart"), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pococha', data: pocoVals, backgroundColor: 'rgba(26,115,232,.8)', borderRadius: 3, stack: 's' },
+        { label: 'TikTok',  data: tokVals,  backgroundColor: 'rgba(254,44,85,.8)',  borderRadius: 3, stack: 's' },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { maxRotation: 60, minRotation: 45, font: { size: 10 } }, grid: { display: false }, stacked: true },
+        y: { beginAtZero: true, stacked: true, ticks: { callback: v => '¥' + (v/10000).toFixed(0) + '万', font: { size: 10 } }, grid: { color: '#f0f0f0' } }
+      }
+    }
+  });
+
+  // テーブル（新しい順）
+  const tableRows = allKeys_.slice().reverse().map((k, idx) => {
+    const realIdx = allKeys_.length - 1 - idx;
+    const v = allVals[realIdx];
+    const pct = Math.round(v / maxVal * 100);
+    return `<tr>
+      <td>${labels[realIdx]}</td>
+      <td class="td-bar-wrap"><div class="trend-bar-inner" style="width:${pct}%"></div></td>
+      <td class="td-num">¥${v.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById("trend-table-wrap").innerHTML = `
+    <table class="trend-table">
+      <thead><tr><th>月</th><th>推移</th><th>合計</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>`;
 }
 
+// ===== 名前変更 =====
 function sel(app, mk, rawEnc, nameEnc) {
   const raw = decodeURIComponent(rawEnc);
   const store = app === 'poco' ? pocoData : tokData;
@@ -448,15 +576,14 @@ function sel(app, mk, rawEnc, nameEnc) {
   if (!l) return;
   if (nameEnc === "__NEW__") { const v = prompt("新しい名前を入力"); if (v) l.selected = v; }
   else l.selected = decodeURIComponent(nameEnc);
-  renderRanking(); persist();
+  renderRanking(); if (activeTab === 'yearly') renderYearly(); persist();
 }
 
-// ===== モーダル（ライバー月別グラフ） =====
+// ===== モーダル =====
 function openModal(enc) {
   const realName = decodeURIComponent(enc);
   mCharts.forEach(c => c.destroy()); mCharts = [];
 
-  // 最新月の表示名を取得
   let displayName = realName;
   for (const store of [pocoData, tokData]) {
     const k = Object.keys(store).sort((a,b)=>numKey(b)-numKey(a))
@@ -467,10 +594,9 @@ function openModal(enc) {
   document.getElementById("mtitle").textContent = displayName;
 
   const apps = [
-    { store: pocoData, label: 'Pococha', cls: 'poco', bg: 'rgba(26,115,232,.7)', border: 'rgba(26,115,232,1)' },
-    { store: tokData,  label: 'TikTok LIVE', cls: 'tok', bg: 'rgba(254,44,85,.7)',  border: 'rgba(254,44,85,1)' },
+    { store: pocoData, label: 'Pococha',    cls: 'poco', bg: 'rgba(26,115,232,.7)',  border: '#1a73e8' },
+    { store: tokData,  label: 'TikTok LIVE', cls: 'tok',  bg: 'rgba(254,44,85,.7)', border: '#fe2c55' },
   ];
-
   const div = document.getElementById("mcharts");
   div.innerHTML = "";
   let found = false;
@@ -483,26 +609,24 @@ function openModal(enc) {
     }
     if (!Object.keys(monthly).length) return;
     found = true;
-
     const cid = `mc_${app.cls}`;
     const sec = document.createElement("div");
     sec.className = "mc-section";
     sec.innerHTML = `<h4 class="${app.cls}">${app.label}</h4><canvas id="${cid}"></canvas>`;
     div.appendChild(sec);
-
     const sortedK = Object.keys(monthly).sort((a,b)=>numKey(a)-numKey(b));
     setTimeout(() => {
       const c = new Chart(document.getElementById(cid), {
         type: 'bar',
         data: {
           labels: sortedK.map(k => { const p=parseSheet(k); return p?p.label:k; }),
-          datasets: [{ data: sortedK.map(k=>monthly[k]), backgroundColor: app.bg, borderColor: app.border, borderWidth: 1 }]
+          datasets: [{ data: sortedK.map(k=>monthly[k]), backgroundColor: app.bg, borderColor: app.border, borderWidth: 1, borderRadius: 4 }]
         },
         options: {
           responsive: true,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } },
+            y: { beginAtZero: true, ticks: { callback: v => '¥'+v.toLocaleString() } },
             x: { ticks: { maxRotation: 45, minRotation: 30 } }
           }
         }
@@ -520,35 +644,27 @@ document.getElementById("modal").addEventListener("click", e => {
   if (e.target === document.getElementById("modal")) closeModal();
 });
 
-// ===== data.json 保存（Netlify更新用）=====
+// ===== data.json 保存 =====
 function saveDataJson() {
-  const json = JSON.stringify({ poco: pocoData, tok: tokData }, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ poco: pocoData, tok: tokData }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'data.json';
-  a.click();
+  a.href = URL.createObjectURL(blob); a.download = 'data.json'; a.click();
   URL.revokeObjectURL(a.href);
 }
 
 // ===== 共有用HTML書き出し =====
 function exportStandalone() {
   const src = document.documentElement.outerHTML;
-  const dataStr = JSON.stringify({ poco: pocoData, tok: tokData });
   const out = src.replace(
     'const BAKED_DATA = null; // BAKED_DATA_PLACEHOLDER',
-    `const BAKED_DATA = ${dataStr}; // BAKED_DATA_PLACEHOLDER`
+    `const BAKED_DATA = ${JSON.stringify({ poco: pocoData, tok: tokData })}; // BAKED_DATA_PLACEHOLDER`
   );
-  if (out === src) {
-    alert('書き出し失敗：プレースホルダーが見つかりませんでした');
-    return;
-  }
+  if (out === src) { alert('書き出し失敗：プレースホルダーが見つかりませんでした'); return; }
   const blob = new Blob([out], { type: 'text/html' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `ライバー売上_${new Date().toISOString().slice(0,10)}.html`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
 function escH(s) {
